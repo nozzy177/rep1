@@ -16,6 +16,7 @@
     "@types/turndown": "^5.0.6",
     "canvas-confetti": "^1.9.3",
     "date-fns": "^2.30.0",
+    "defuddle": "^0.19.4",
     "file-saver": "^2.0.5",
     "framer-motion": "^11.16.1",
     "jszip": "^3.10.2",

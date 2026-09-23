@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import TurndownService from 'turndown';
+import Defuddle from 'defuddle/full';
 import { Settings, ClipHistoryItem } from '../types';
 
 interface Props {
@@ -7,74 +7,187 @@ interface Props {
   onClip: (item: ClipHistoryItem) => void;
 }
 
-// Demo content for preview
+// Demo content for preview — simulates a real web page with clutter
 const DEMO_HTML = `
-<div>
-  <h1>Sample Article Title</h1>
-  <p>This is a <strong>sample article</strong> that demonstrates how the Web Clipper works. 
-  It captures the content of any web page and converts it to <em>Markdown</em> format.</p>
-  <h2>Key Features</h2>
-  <ul>
-    <li>One-click page clipping</li>
-    <li>Automatic HTML to Markdown conversion</li>
-    <li>Send to any API endpoint</li>
-    <li>Configurable settings</li>
-  </ul>
-  <h2>How It Works</h2>
-  <p>The extension captures the current page's HTML content, converts it to clean Markdown 
-  using Turndown, and sends it to your configured API endpoint via a POST request.</p>
-  <blockquote>This is a blockquote that will be properly formatted in Markdown.</blockquote>
-  <p>Visit <a href="https://example.com">example.com</a> for more information.</p>
-</div>
+<!DOCTYPE html>
+<html>
+<head><title>How to Build Better Habits: A Science-Based Guide</title></head>
+<body>
+  <nav class="main-nav">
+    <a href="/">Home</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+  </nav>
+  
+  <aside class="sidebar">
+    <div class="ad-banner">Subscribe to our newsletter!</div>
+    <div class="related-posts">
+      <h3>Related Articles</h3>
+      <ul>
+        <li><a href="/post-1">Another post</a></li>
+        <li><a href="/post-2">Yet another post</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <article class="post-content">
+    <h1>How to Build Better Habits: A Science-Based Guide</h1>
+    <p class="meta">By <strong>Jane Smith</strong> • Published on January 15, 2024 • 8 min read</p>
+    
+    <p>Building better habits is one of the most impactful things you can do for your long-term 
+    well-being. Research in <em>behavioral psychology</em> shows that small, consistent changes 
+    lead to remarkable results over time.</p>
+    
+    <h2>The Science Behind Habit Formation</h2>
+    <p>Every habit follows a four-step loop: <strong>cue, craving, response, and reward</strong>. 
+    Understanding this loop is the key to changing your behavior.</p>
+    
+    <blockquote>
+      <p>"We are what we repeatedly do. Excellence, then, is not an act, but a habit." — Aristotle</p>
+    </blockquote>
+    
+    <h2>Five Strategies That Actually Work</h2>
+    <ol>
+      <li><strong>Start impossibly small</strong> — Make the habit so easy you can't say no</li>
+      <li><strong>Habit stacking</strong> — Attach new habits to existing ones</li>
+      <li><strong>Environment design</strong> — Make good cues visible and bad cues invisible</li>
+      <li><strong>The two-minute rule</strong> — Scale any habit down to two minutes</li>
+      <li><strong>Track your progress</strong> — What gets measured gets managed</li>
+    </ol>
+    
+    <h3>Example: Building a Reading Habit</h3>
+    <p>Let's say you want to read more books. Instead of committing to "read 30 minutes a day," 
+    start with "read one page before bed." This removes the friction and makes it almost 
+    effortless to begin.</p>
+    
+    <pre><code class="language-js">// Track your habit streak
+const habitTracker = {
+  reading: { streak: 0, lastDate: null },
+  log: function(date) {
+    this.reading.streak++;
+    this.reading.lastDate = date;
+  }
+};</code></pre>
+    
+    <p>After 30 days of reading just one page, you'll likely find yourself reading much more. 
+    The habit has taken root.</p>
+    
+    <h2>Common Pitfalls to Avoid</h2>
+    <ul>
+      <li>Trying to change too many habits at once</li>
+      <li>Relying on motivation instead of systems</li>
+      <li>Not designing your environment for success</li>
+      <li>Giving up after a single missed day</li>
+    </ul>
+    
+    <h2>Conclusion</h2>
+    <p>The secret to building better habits isn't willpower — it's strategy. Start small, 
+    be consistent, and design your environment to support the person you want to become.</p>
+    
+    <div class="comments-section">
+      <h3>Comments (47)</h3>
+      <div class="comment">
+        <strong>User123:</strong> Great article! I've been using habit stacking for months.
+      </div>
+      <div class="comment">
+        <strong>Reader42:</strong> The two-minute rule changed my life.
+      </div>
+    </div>
+  </article>
+  
+  <footer>
+    <p>© 2024 Blog. All rights reserved.</p>
+    <nav>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </nav>
+  </footer>
+</body>
+</html>
 `;
 
 export default function ClipperPopup({ settings, onClip }: Props) {
   const [isClipping, setIsClipping] = useState(false);
   const [markdown, setMarkdown] = useState('');
+  const [metadata, setMetadata] = useState<{
+    title?: string;
+    author?: string;
+    published?: string;
+    description?: string;
+    wordCount?: number;
+    parseTime?: number;
+  }>({});
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [showPreview, setShowPreview] = useState(false);
 
-  const turndownService = new TurndownService({
-    headingStyle: 'atx',
-    codeBlockStyle: 'fenced',
-    bulletListMarker: '-',
-  });
+  const generateMarkdown = async (html: string, url: string): Promise<{
+    markdown: string;
+    metadata: typeof metadata;
+  }> => {
+    // Parse HTML string into a DOM Document
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
 
-  // Remove unnecessary elements
-  turndownService.remove(['script', 'style', 'nav', 'footer', 'iframe', 'noscript']);
+    // Use Defuddle to extract main content and convert to Markdown
+    const defuddle = new Defuddle(doc, {
+      url,
+      markdown: true,
+      removeHiddenElements: true,
+      removeLowScoring: true,
+      removeSmallImages: true,
+      standardize: true,
+    });
 
-  const generateMarkdown = (html: string, url: string, title: string): string => {
+    const result = defuddle.parse();
+
+    // Build final markdown with optional frontmatter
     let md = '';
-    
-    if (settings.includeTitle && title) {
-      md += `# ${title}\n\n`;
+
+    if (settings.includeTitle && result.title) {
+      md += `# ${result.title}\n\n`;
     }
-    
+
     if (settings.includeUrl && url) {
       md += `> Source: [${url}](${url})\n\n`;
     }
-    
+
     if (settings.includeDate) {
-      md += `> Clipped on: ${new Date().toLocaleString()}\n\n---\n\n`;
+      const dateStr = result.published || new Date().toLocaleString();
+      md += `> Clipped on: ${dateStr}\n\n---\n\n`;
     }
-    
-    md += turndownService.turndown(html);
-    
-    return md;
+
+    // Add author if available
+    if (result.author) {
+      md += `> Author: ${result.author}\n\n`;
+    }
+
+    // Defuddle's content is already Markdown when markdown: true
+    md += result.content || '';
+
+    return {
+      markdown: md,
+      metadata: {
+        title: result.title,
+        author: result.author,
+        published: result.published,
+        description: result.description,
+        wordCount: result.wordCount,
+        parseTime: result.parseTime,
+      },
+    };
   };
 
   const handleClip = async () => {
     setIsClipping(true);
     setStatus('idle');
-    
+
     try {
-      // Generate markdown from demo content (in real extension, this would be the page content)
-      const demoUrl = 'https://example.com/article';
-      const demoTitle = 'Sample Article Title';
-      const md = generateMarkdown(DEMO_HTML, demoUrl, demoTitle);
+      const demoUrl = 'https://example.com/habits-guide';
+      const { markdown: md, metadata: meta } = await generateMarkdown(DEMO_HTML, demoUrl);
       setMarkdown(md);
-      
+      setMetadata(meta);
+
       // Simulate sending to API
       if (settings.apiUrl && settings.apiUrl !== 'https://your-api.com/api/clip') {
         try {
@@ -86,51 +199,38 @@ export default function ClipperPopup({ settings, onClip }: Props) {
             },
             body: JSON.stringify({
               url: demoUrl,
-              title: demoTitle,
+              title: meta.title || 'Untitled',
+              author: meta.author,
+              published: meta.published,
               content: md,
               format: settings.format,
               clippedAt: new Date().toISOString(),
             }),
           });
-          
+
           if (response.ok) {
             setStatus('success');
             setStatusMessage('Successfully clipped and sent to API!');
-            onClip({
-              id: Date.now().toString(),
-              title: demoTitle,
-              url: demoUrl,
-              markdown: md,
-              timestamp: Date.now(),
-              status: 'success',
-            });
           } else {
             throw new Error(`API returned ${response.status}`);
           }
         } catch (err: any) {
           setStatus('success');
           setStatusMessage('Markdown generated! (API not reachable in demo mode)');
-          onClip({
-            id: Date.now().toString(),
-            title: demoTitle,
-            url: demoUrl,
-            markdown: md,
-            timestamp: Date.now(),
-            status: 'success',
-          });
         }
       } else {
         setStatus('success');
         setStatusMessage('Markdown generated! Configure API URL in Settings to send.');
-        onClip({
-          id: Date.now().toString(),
-          title: demoTitle,
-          url: demoUrl,
-          markdown: md,
-          timestamp: Date.now(),
-          status: 'success',
-        });
       }
+
+      onClip({
+        id: Date.now().toString(),
+        title: meta.title || 'Untitled',
+        url: demoUrl,
+        markdown: md,
+        timestamp: Date.now(),
+        status: 'success',
+      });
     } catch (err: any) {
       setStatus('error');
       setStatusMessage(err.message || 'Failed to clip page');
@@ -166,8 +266,14 @@ export default function ClipperPopup({ settings, onClip }: Props) {
           </div>
           <span className="text-xs text-slate-400">Current page (demo)</span>
         </div>
-        <p className="text-sm text-white font-medium truncate">Sample Article Title</p>
-        <p className="text-xs text-slate-400 truncate">https://example.com/article</p>
+        <p className="text-sm text-white font-medium truncate">How to Build Better Habits</p>
+        <p className="text-xs text-slate-400 truncate">https://example.com/habits-guide</p>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+            Defuddle
+          </span>
+          <span className="text-[10px] text-slate-500">extracts main content • removes clutter</span>
+        </div>
       </div>
 
       {/* Clip Button */}
@@ -186,7 +292,7 @@ export default function ClipperPopup({ settings, onClip }: Props) {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            Clipping...
+            Extracting content...
           </>
         ) : (
           <>
@@ -201,8 +307,8 @@ export default function ClipperPopup({ settings, onClip }: Props) {
       {/* Status Message */}
       {status !== 'idle' && (
         <div className={`mt-3 p-3 rounded-lg text-sm flex items-center gap-2 ${
-          status === 'success' 
-            ? 'bg-green-500/10 border border-green-500/30 text-green-400' 
+          status === 'success'
+            ? 'bg-green-500/10 border border-green-500/30 text-green-400'
             : 'bg-red-500/10 border border-red-500/30 text-red-400'
         }`}>
           {status === 'success' ? (
@@ -215,6 +321,35 @@ export default function ClipperPopup({ settings, onClip }: Props) {
             </svg>
           )}
           <span>{statusMessage}</span>
+        </div>
+      )}
+
+      {/* Extracted Metadata */}
+      {metadata.title && (
+        <div className="mt-3 bg-slate-700/30 rounded-lg p-3 border border-slate-600/30">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5 font-medium">Extracted Metadata</p>
+          <div className="space-y-1">
+            {metadata.title && (
+              <p className="text-xs text-slate-300 truncate">
+                <span className="text-slate-500">Title:</span> {metadata.title}
+              </p>
+            )}
+            {metadata.author && (
+              <p className="text-xs text-slate-300">
+                <span className="text-slate-500">Author:</span> {metadata.author}
+              </p>
+            )}
+            {metadata.published && (
+              <p className="text-xs text-slate-300">
+                <span className="text-slate-500">Published:</span> {metadata.published}
+              </p>
+            )}
+            {metadata.description && (
+              <p className="text-xs text-slate-400 truncate">
+                <span className="text-slate-500">Description:</span> {metadata.description}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -241,7 +376,7 @@ export default function ClipperPopup({ settings, onClip }: Props) {
               Copy
             </button>
           </div>
-          
+
           {showPreview && (
             <div className="bg-slate-900/80 rounded-lg p-3 border border-slate-600/50 max-h-48 overflow-y-auto">
               <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono">{markdown}</pre>
@@ -251,14 +386,18 @@ export default function ClipperPopup({ settings, onClip }: Props) {
       )}
 
       {/* Quick Stats */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-4 gap-2">
         <div className="bg-slate-700/30 rounded-lg p-2 text-center border border-slate-600/30">
           <p className="text-lg font-bold text-white">{markdown.length}</p>
-          <p className="text-[10px] text-slate-400">Characters</p>
+          <p className="text-[10px] text-slate-400">Chars</p>
         </div>
         <div className="bg-slate-700/30 rounded-lg p-2 text-center border border-slate-600/30">
-          <p className="text-lg font-bold text-white">{markdown.split('\n').length}</p>
-          <p className="text-[10px] text-slate-400">Lines</p>
+          <p className="text-lg font-bold text-white">{metadata.wordCount || markdown.split(/\s+/).filter(Boolean).length}</p>
+          <p className="text-[10px] text-slate-400">Words</p>
+        </div>
+        <div className="bg-slate-700/30 rounded-lg p-2 text-center border border-slate-600/30">
+          <p className="text-lg font-bold text-white">{metadata.parseTime ? `${metadata.parseTime}ms` : '—'}</p>
+          <p className="text-[10px] text-slate-400">Parse</p>
         </div>
         <div className="bg-slate-700/30 rounded-lg p-2 text-center border border-slate-600/30">
           <p className="text-lg font-bold text-white">{settings.format === 'markdown' ? 'MD' : settings.format.toUpperCase()}</p>
