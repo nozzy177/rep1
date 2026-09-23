@@ -7,31 +7,16 @@ const MANIFEST_JSON = `{
   "name": "Web Clipper",
   "version": "1.1.0",
   "description": "Clip web pages and send them as Markdown to your API. Powered by Defuddle for intelligent content extraction.",
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "scripting"],
   "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"
-  },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }`;
 
-const BACKGROUND_JS = `// Background service worker
-chrome.runtime.onInstalled.addListener(() => {
-  // Set default settings
+const BACKGROUND_JS = `chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.sync.get(['settings'], (result) => {
     if (!result.settings) {
       chrome.storage.sync.set({
@@ -89,7 +74,8 @@ const POPUP_HTML = `<!DOCTYPE html>
     .copy-btn:hover { background: rgba(96,165,250,0.1); }
     .preview-content { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; max-height: 180px; overflow-y: auto; }
     .preview-content pre { font-size: 11px; white-space: pre-wrap; color: #cbd5e1; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.5; }
-    .stats { margin-top: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .stats { margin-top: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; display: none; }
+    .stats.visible { display: grid; }
     .stat { background: rgba(51,65,85,0.3); border-radius: 6px; padding: 6px; text-align: center; border: 1px solid rgba(71,85,105,0.3); }
     .stat .value { font-size: 14px; font-weight: 700; color: white; }
     .stat .label { font-size: 9px; color: #64748b; margin-top: 2px; }
@@ -104,6 +90,8 @@ const POPUP_HTML = `<!DOCTYPE html>
     .form-group .hint { font-size: 10px; color: #64748b; margin-top: 3px; }
     .save-btn { width: 100%; padding: 10px; border: none; border-radius: 8px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
     .save-btn:hover { opacity: 0.9; }
+    .back-link { display: block; text-align: center; font-size: 11px; color: #94a3b8; text-decoration: none; padding: 6px; border-radius: 6px; }
+    .back-link:hover { color: #e2e8f0; background: rgba(51,65,85,0.3); }
     .powered-by { text-align: center; margin-top: 8px; font-size: 10px; color: #475569; }
     .powered-by a { color: #64748b; text-decoration: none; }
     .powered-by a:hover { color: #94a3b8; }
@@ -122,7 +110,7 @@ const POPUP_HTML = `<!DOCTYPE html>
       <div class="url" id="page-url">...</div>
     </div>
 
-    <button class="clip-btn" id="clip-btn" onclick="clipPage()">📋 Clip This Page</button>
+    <button class="clip-btn" id="clip-btn">📋 Clip This Page</button>
     
     <div class="status" id="status"></div>
     
@@ -134,21 +122,21 @@ const POPUP_HTML = `<!DOCTYPE html>
     <div class="preview" id="preview">
       <div class="preview-header">
         <span>📝 Markdown Output</span>
-        <button class="copy-btn" onclick="copyMarkdown()">📋 Copy</button>
+        <button class="copy-btn" id="copy-btn">📋 Copy</button>
       </div>
       <div class="preview-content">
         <pre id="markdown-output"></pre>
       </div>
     </div>
 
-    <div class="stats" id="stats" style="display:none;">
+    <div class="stats" id="stats">
       <div class="stat"><div class="value" id="stat-chars">—</div><div class="label">Chars</div></div>
       <div class="stat"><div class="value" id="stat-words">—</div><div class="label">Words</div></div>
       <div class="stat"><div class="value" id="stat-time">—</div><div class="label">Parse</div></div>
       <div class="stat"><div class="value" id="stat-format">MD</div><div class="label">Format</div></div>
     </div>
 
-    <a href="#" class="settings-link" onclick="showSettings(event)">⚙️ Settings</a>
+    <a href="#" class="settings-link" id="settings-link">⚙️ Settings</a>
     <div class="powered-by">Powered by <a href="https://github.com/kepano/defuddle" target="_blank">Defuddle</a></div>
   </div>
 
@@ -163,8 +151,8 @@ const POPUP_HTML = `<!DOCTYPE html>
       <input type="password" id="api-key" placeholder="Bearer token">
       <div class="hint">Sent as Authorization: Bearer header</div>
     </div>
-    <button class="save-btn" onclick="saveSettings()">💾 Save Settings</button>
-    <a href="#" class="settings-link" onclick="showMain(event)">← Back to Clipper</a>
+    <button class="save-btn" id="save-btn">💾 Save Settings</button>
+    <a href="#" class="back-link" id="back-link">← Back to Clipper</a>
   </div>
 
   <script src="defuddle.min.js"></script>
@@ -190,6 +178,29 @@ chrome.storage.sync.get(['settings'], (result) => {
 
 let currentMarkdown = '';
 
+// Clip button
+document.getElementById('clip-btn').addEventListener('click', clipPage);
+
+// Copy button
+document.getElementById('copy-btn').addEventListener('click', copyMarkdown);
+
+// Settings link
+document.getElementById('settings-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('main-view').style.display = 'none';
+  document.getElementById('settings-form').classList.add('visible');
+});
+
+// Back link
+document.getElementById('back-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('main-view').style.display = 'block';
+  document.getElementById('settings-form').classList.remove('visible');
+});
+
+// Save button
+document.getElementById('save-btn').addEventListener('click', saveSettings);
+
 async function clipPage() {
   const btn = document.getElementById('clip-btn');
   const status = document.getElementById('status');
@@ -203,10 +214,9 @@ async function clipPage() {
   status.style.display = 'none';
   metadata.classList.remove('visible');
   preview.classList.remove('visible');
-  stats.style.display = 'none';
+  stats.classList.remove('visible');
 
   try {
-    // Get page content by executing script in the active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -221,11 +231,9 @@ async function clipPage() {
 
     const pageData = results[0].result;
     
-    // Parse HTML into a Document using DOMParser
     const parser = new DOMParser();
     const doc = parser.parseFromString(pageData.html, 'text/html');
     
-    // Use Defuddle to extract main content and convert to Markdown
     const defuddle = new Defuddle(doc, {
       url: pageData.url,
       markdown: true,
@@ -237,7 +245,6 @@ async function clipPage() {
     
     const result = defuddle.parse();
     
-    // Build final markdown with frontmatter
     const settings = (await chrome.storage.sync.get(['settings'])).settings || {};
     let markdown = '';
     
@@ -255,11 +262,9 @@ async function clipPage() {
       markdown += '> Author: ' + result.author + '\\n\\n';
     }
     
-    // Defuddle's content is already Markdown when markdown: true
     markdown += result.content || '';
     currentMarkdown = markdown;
     
-    // Show metadata
     const metadataContent = document.getElementById('metadata-content');
     let metaHtml = '';
     if (result.title) metaHtml += '<div class="item"><span>Title:</span> ' + result.title + '</div>';
@@ -270,17 +275,14 @@ async function clipPage() {
     metadataContent.innerHTML = metaHtml;
     metadata.classList.add('visible');
     
-    // Show preview
     document.getElementById('markdown-output').textContent = markdown;
     preview.classList.add('visible');
     
-    // Show stats
     document.getElementById('stat-chars').textContent = markdown.length;
     document.getElementById('stat-words').textContent = result.wordCount || markdown.split(/\\s+/).filter(Boolean).length;
     document.getElementById('stat-time').textContent = result.parseTime ? result.parseTime + 'ms' : '—';
-    stats.style.display = 'grid';
+    stats.classList.add('visible');
     
-    // Send to API if configured
     if (settings.apiUrl) {
       try {
         const headers = { 'Content-Type': 'application/json' };
@@ -330,22 +332,10 @@ async function clipPage() {
 
 function copyMarkdown() {
   navigator.clipboard.writeText(currentMarkdown).then(() => {
-    const btn = document.querySelector('.copy-btn');
+    const btn = document.getElementById('copy-btn');
     btn.textContent = '✅ Copied!';
     setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
   });
-}
-
-function showSettings(e) {
-  e.preventDefault();
-  document.getElementById('main-view').style.display = 'none';
-  document.getElementById('settings-form').classList.add('visible');
-}
-
-function showMain(e) {
-  e.preventDefault();
-  document.getElementById('main-view').style.display = 'block';
-  document.getElementById('settings-form').classList.remove('visible');
 }
 
 function saveSettings() {
@@ -358,11 +348,12 @@ function saveSettings() {
     format: 'markdown'
   };
   chrome.storage.sync.set({ settings }, () => {
-    const btn = document.querySelector('.save-btn');
+    const btn = document.getElementById('save-btn');
     btn.textContent = '✅ Saved!';
     setTimeout(() => {
       btn.textContent = '💾 Save Settings';
-      showMain(new Event('click'));
+      document.getElementById('main-view').style.display = 'block';
+      document.getElementById('settings-form').classList.remove('visible');
     }, 1000);
   });
 }
@@ -449,7 +440,6 @@ Defuddle — библиотека извлечения контента от с�
 | \`popup.js\` | Логика popup с интеграцией Defuddle |
 | \`background.js\` | Фоновый service worker |
 | \`defuddle.min.js\` | Библиотека Defuddle (уже включена!) |
-| \`icons/\` | Папка для иконок расширения |
 
 ## Устранение неполадок
 
@@ -471,26 +461,13 @@ export default function InstallGuide() {
     try {
       const zip = new JSZip();
       
-      // Add manifest
       zip.file('manifest.json', MANIFEST_JSON);
-      
-      // Add background script
       zip.file('background.js', BACKGROUND_JS);
-      
-      // Add popup
       zip.file('popup.html', POPUP_HTML);
       zip.file('popup.js', POPUP_JS);
-      
-      // Add README
       zip.file('README.md', README_MD);
-      
-      // Add icons folder with placeholder
-      const iconsFolder = zip.folder('icons');
-      if (iconsFolder) {
-        iconsFolder.file('README.txt', 'Replace these with actual PNG icons (16x16, 48x48, 128x128).\nYou can use any icon editor or online tool to create them.\n\nOr remove the icon references from manifest.json to use the default Chrome extension icon.');
-      }
 
-      // Download Defuddle library from CDN and include it in the ZIP
+      // Download Defuddle library from CDN
       try {
         const defuddleResponse = await fetch('https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js');
         if (defuddleResponse.ok) {
@@ -500,7 +477,6 @@ export default function InstallGuide() {
           throw new Error('Failed to fetch Defuddle');
         }
       } catch (fetchErr) {
-        // Fallback: add a note if CDN is unreachable
         zip.file('defuddle.min.js', 
           '// ERROR: Could not download Defuddle from CDN.\n' +
           '// Please download manually from:\n' +
@@ -510,7 +486,6 @@ export default function InstallGuide() {
         console.warn('Could not download Defuddle from CDN:', fetchErr);
       }
       
-      // Generate and download ZIP
       const blob = await zip.generateAsync({ type: 'blob' });
       saveAs(blob, 'web-clipper-extension.zip');
       
