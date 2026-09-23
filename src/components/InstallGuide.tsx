@@ -525,139 +525,107 @@ export default function InstallGuide() {
 
   return (
     <div className="p-5">
-      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-        </svg>
-        Install Extension
-      </h2>
-
-      {/* Download Button */}
+      {/* Big Download Button */}
       <button
         onClick={downloadExtension}
         disabled={downloading}
-        className={`w-full py-3 px-4 rounded-xl font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 mb-4 ${
+        className={`w-full py-4 px-6 rounded-2xl font-bold text-white text-lg transition-all duration-200 flex items-center justify-center gap-3 mb-3 ${
           downloaded
-            ? 'bg-green-500 shadow-lg shadow-green-500/25'
+            ? 'bg-green-500 shadow-lg shadow-green-500/30 scale-[1.02]'
             : downloading
             ? 'bg-slate-600 cursor-not-allowed'
-            : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg shadow-purple-500/25'
+            : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-xl shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] active:scale-[0.98]'
         }`}
       >
         {downloading ? (
           <>
-            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            Packaging...
+            Скачиваю...
           </>
         ) : downloaded ? (
           <>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Downloaded!
+            Скачано! ✓
           </>
         ) : (
           <>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download Extension (.zip)
+            ⬇ Скачать расширение
           </>
         )}
       </button>
       
-      <p className="text-[11px] text-slate-500 text-center -mt-2 mb-4">
-        Defuddle library included • Ready to install
+      <p className="text-xs text-slate-400 text-center mb-5">
+        ZIP-архив с расширением • Defuddle уже внутри
       </p>
 
       {/* Installation Steps */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-slate-300">Установка в Chrome (3 шага):</h3>
+      <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+        <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <span className="text-base">📖</span> Как установить (3 шага):
+        </h3>
         
-        <div className="flex gap-3 items-start">
-          <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-xs font-bold text-blue-400">1</span>
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/30">
+              <span className="text-xs font-bold text-white">1</span>
+            </div>
+            <div className="pt-0.5">
+              <p className="text-sm text-white font-medium">Распакуйте ZIP</p>
+              <p className="text-xs text-slate-400 mt-0.5">Скачайте файл выше и распакуйте в любую папку</p>
+            </div>
           </div>
-          <div className="text-sm text-slate-300">
-            <p><strong>Скачайте ZIP</strong> (кнопка выше) и распакуйте в любую папку.</p>
-            <p className="text-xs text-slate-500 mt-1">Внутри уже есть Defuddle — ничего дополнительно скачивать не нужно.</p>
+          
+          <div className="flex gap-3 items-start">
+            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/30">
+              <span className="text-xs font-bold text-white">2</span>
+            </div>
+            <div className="pt-0.5">
+              <p className="text-sm text-white font-medium">Откройте chrome://extensions/</p>
+              <p className="text-xs text-slate-400 mt-0.5">Вставьте эту ссылку в адресную строку Chrome</p>
+              <p className="text-xs text-slate-400">Включите переключатель <strong className="text-white">"Режим разработчика"</strong> справа вверху</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-3 items-start">
+            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/30">
+              <span className="text-xs font-bold text-white">3</span>
+            </div>
+            <div className="pt-0.5">
+              <p className="text-sm text-white font-medium">"Загрузить распакованное расширение"</p>
+              <p className="text-xs text-slate-400 mt-0.5">Нажмите эту кнопку и выберите папку из шага 1</p>
+            </div>
           </div>
         </div>
-        
-        <div className="flex gap-3 items-start">
-          <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-xs font-bold text-blue-400">2</span>
+
+        {/* Success indicator */}
+        <div className="mt-4 pt-3 border-t border-slate-700/50">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-500/30">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-sm text-white font-medium">Готово! Иконка 📋 появится в Chrome</p>
           </div>
-          <div className="text-sm text-slate-300">
-            <p>В Chrome откройте: <code className="text-purple-400 bg-purple-500/10 px-1 rounded">chrome://extensions/</code></p>
-            <p className="text-xs text-slate-500 mt-1">Включите <strong>"Режим разработчика"</strong> (переключатель справа вверху).</p>
-          </div>
-        </div>
-        
-        <div className="flex gap-3 items-start">
-          <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-xs font-bold text-blue-400">3</span>
-          </div>
-          <div className="text-sm text-slate-300">
-            <p>Нажмите <strong>"Загрузить распакованное расширение"</strong> и выберите папку с ZIP.</p>
-          </div>
-        </div>
-        
-        <div className="flex gap-3 items-start">
-          <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-xs font-bold text-green-400">✓</span>
-          </div>
-          <p className="text-sm text-slate-300">Готово! Иконка 📋 появится в панели Chrome.</p>
         </div>
       </div>
 
-      {/* Quick tip */}
-      <div className="mt-3 bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-        <p className="text-xs text-green-300 flex items-start gap-2">
-          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
+      {/* Tip */}
+      <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+        <p className="text-xs text-amber-200 flex items-start gap-2">
+          <span className="text-sm">💡</span>
           <span>
-            <strong>Совет:</strong> закрепите расширение — нажмите на иконку пазла 🧩 в Chrome и нажмите 📌 рядом с "Web Clipper".
+            <strong>Закрепите расширение:</strong> нажмите иконку 🧩 (пазл) в правом верхнем углу Chrome → найдите "Web Clipper" → нажмите 📌 (булавка)
           </span>
         </p>
-      </div>
-
-      {/* Defuddle Info */}
-      <div className="mt-4 bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
-        <p className="text-xs text-purple-300 flex items-start gap-2">
-          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-          <span>
-            <strong>Defuddle</strong> by kepano (creator of Obsidian) extracts the main content from web pages, 
-            removing ads, navigation, sidebars, and comments. It also extracts metadata like author, 
-            publish date, and description.
-          </span>
-        </p>
-      </div>
-
-      {/* API Format */}
-      <div className="mt-3 bg-slate-900/50 rounded-lg p-3 border border-slate-600/30">
-        <p className="text-xs font-medium text-slate-400 mb-2">API Request Format:</p>
-        <pre className="text-[11px] text-slate-400 font-mono overflow-x-auto">
-{`POST /api/clip
-Content-Type: application/json
-
-{
-  "url": "https://...",
-  "title": "Page Title",
-  "author": "Author Name",
-  "published": "2024-01-15",
-  "description": "Article summary...",
-  "content": "# Markdown...",
-  "format": "markdown",
-  "clippedAt": "2024-..."
-}`}
-        </pre>
       </div>
     </div>
   );
