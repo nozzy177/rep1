@@ -175,117 +175,94 @@ export default function InstallGuide() {
 </html>`;
       zip.file('popup.html', popupHtml);
       
-      // popup.js - ПРОСТАЯ ВЕРСИЯ
+      // popup.js - САМАЯ ПРОСТАЯ ВЕРСИЯ
       const popupJs = `
-// Ждем загрузки DOM
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('Popup loaded');
-  
-  // Получаем информацию о текущей вкладке
-  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    if (tabs && tabs[0]) {
-      const titleEl = document.getElementById('page-title');
-      const urlEl = document.getElementById('page-url');
-      if (titleEl) titleEl.textContent = tabs[0].title || 'Untitled';
-      if (urlEl) urlEl.textContent = tabs[0].url || '';
-    }
-  });
-  
-  let currentMarkdown = '';
-  
-  // Кнопка клип
-  const clipBtn = document.getElementById('clip-btn');
-  if (clipBtn) {
-    clipBtn.addEventListener('click', async function() {
-      console.log('Clip button clicked');
-      
-      const btn = this;
-      const status = document.getElementById('status');
-      const preview = document.getElementById('preview');
-      const copyBtn = document.getElementById('copy-btn');
-      
-      btn.disabled = true;
-      btn.textContent = '⏳ Extracting...';
-      
-      try {
-        // Получаем текущую вкладку
-        const tabs = await chrome.tabs.query({active: true, currentWindow: true});
-        const tab = tabs[0];
-        
-        // Внедряем скрипт для получения контента
-        const results = await chrome.scripting.executeScript({
-          target: {tabId: tab.id},
-          function: () => {
-            // Простое извлечение текста
-            const title = document.title;
-            const url = window.location.href;
-            
-            // Получаем основной контент
-            let content = '';
-            const article = document.querySelector('article') || 
-                           document.querySelector('main') || 
-                           document.querySelector('[role="main"]') ||
-                           document.body;
-            
-            // Клонируем и очищаем
-            const clone = article.cloneNode(true);
-            
-            // Удаляем ненужное
-            clone.querySelectorAll('script, style, nav, footer, iframe, noscript, .ad, .ads, .sidebar, .comments, nav, .menu').forEach(el => el.remove());
-            
-            content = clone.textContent || clone.innerText || '';
-            
-            return {title, url, content: content.trim()};
-          }
-        });
-        
-        const data = results[0].result;
-        
-        // Создаем простой Markdown
-        let markdown = '# ' + data.title + '\\n\\n';
-        markdown += '> Source: ' + data.url + '\\n\\n';
-        markdown += '> Clipped: ' + new Date().toLocaleString() + '\\n\\n---\\n\\n';
-        markdown += data.content;
-        
-        currentMarkdown = markdown;
-        
-        // Показываем результат
-        const output = document.getElementById('markdown-output');
-        if (output) output.textContent = markdown;
-        if (preview) preview.classList.add('show');
-        if (copyBtn) copyBtn.style.display = 'block';
-        
-        if (status) {
-          status.textContent = '✅ Clipped successfully!';
-          status.className = 'status success';
-        }
-        
-      } catch (err) {
-        console.error('Error:', err);
-        if (status) {
-          status.textContent = '❌ Error: ' + err.message;
-          status.className = 'status error';
-        }
-      }
-      
-      btn.disabled = false;
-      btn.textContent = '📋 Clip This Page';
-    });
-  }
-  
-  // Кнопка копирования
-  const copyBtn = document.getElementById('copy-btn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', function() {
-      navigator.clipboard.writeText(currentMarkdown).then(() => {
-        this.textContent = '✅ Copied!';
-        setTimeout(() => {
-          this.textContent = '📋 Copy Markdown';
-        }, 2000);
-      });
-    });
+console.log('popup.js loaded');
+
+// Показываем информацию о странице сразу
+chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+  console.log('Got tabs:', tabs);
+  if (tabs && tabs[0]) {
+    document.getElementById('page-title').textContent = tabs[0].title || 'Untitled';
+    document.getElementById('page-url').textContent = tabs[0].url || '';
+    console.log('Set page info');
   }
 });
+
+let currentMarkdown = '';
+
+// Кнопка клип - ПРЯМОЙ HANDLER
+document.getElementById('clip-btn').onclick = async function() {
+  console.log('Button clicked!');
+  alert('Button clicked!');
+  
+  const btn = this;
+  const status = document.getElementById('status');
+  const preview = document.getElementById('preview');
+  const copyBtn = document.getElementById('copy-btn');
+  
+  btn.disabled = true;
+  btn.textContent = '⏳ Extracting...';
+  
+  try {
+    const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+    const tab = tabs[0];
+    
+    const results = await chrome.scripting.executeScript({
+      target: {tabId: tab.id},
+      function: () => {
+        const title = document.title;
+        const url = window.location.href;
+        const article = document.querySelector('article') || 
+                       document.querySelector('main') || 
+                       document.querySelector('[role="main"]') ||
+                       document.body;
+        
+        const clone = article.cloneNode(true);
+        clone.querySelectorAll('script, style, nav, footer, iframe, noscript, .ad, .ads, .sidebar, .comments').forEach(el => el.remove());
+        
+        return {title, url, content: (clone.textContent || '').trim()};
+      }
+    });
+    
+    const data = results[0].result;
+    
+    let markdown = '# ' + data.title + '\\n\\n';
+    markdown += '> Source: ' + data.url + '\\n\\n';
+    markdown += '> Clipped: ' + new Date().toLocaleString() + '\\n\\n---\\n\\n';
+    markdown += data.content;
+    
+    currentMarkdown = markdown;
+    
+    document.getElementById('markdown-output').textContent = markdown;
+    preview.classList.add('show');
+    copyBtn.style.display = 'block';
+    
+    status.textContent = '✅ Clipped successfully!';
+    status.className = 'status success';
+    
+  } catch (err) {
+    console.error('Error:', err);
+    alert('Error: ' + err.message);
+    status.textContent = '❌ Error: ' + err.message;
+    status.className = 'status error';
+  }
+  
+  btn.disabled = false;
+  btn.textContent = '📋 Clip This Page';
+};
+
+// Кнопка копирования
+document.getElementById('copy-btn').onclick = function() {
+  navigator.clipboard.writeText(currentMarkdown).then(() => {
+    this.textContent = '✅ Copied!';
+    setTimeout(() => {
+      this.textContent = '📋 Copy Markdown';
+    }, 2000);
+  });
+};
+
+console.log('All handlers set');
 `;
       zip.file('popup.js', popupJs);
       
