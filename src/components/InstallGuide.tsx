@@ -160,46 +160,64 @@ const POPUP_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const POPUP_JS = `// Get current tab info
+const POPUP_JS = `// Helper function to safely add event listeners
+function safeAddListener(id, event, handler) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener(event, handler);
+  } else {
+    console.error('Element not found:', id);
+  }
+}
+
+// Get current tab info
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   if (tabs[0]) {
-    document.getElementById('page-title').textContent = tabs[0].title || 'Untitled';
-    document.getElementById('page-url').textContent = tabs[0].url || '';
+    const titleEl = document.getElementById('page-title');
+    const urlEl = document.getElementById('page-url');
+    if (titleEl) titleEl.textContent = tabs[0].title || 'Untitled';
+    if (urlEl) urlEl.textContent = tabs[0].url || '';
   }
 });
 
 // Load settings
 chrome.storage.sync.get(['settings'], (result) => {
   if (result.settings) {
-    document.getElementById('api-url').value = result.settings.apiUrl || '';
-    document.getElementById('api-key').value = result.settings.apiKey || '';
+    const apiUrlEl = document.getElementById('api-url');
+    const apiKeyEl = document.getElementById('api-key');
+    if (apiUrlEl) apiUrlEl.value = result.settings.apiUrl || '';
+    if (apiKeyEl) apiKeyEl.value = result.settings.apiKey || '';
   }
 });
 
 let currentMarkdown = '';
 
 // Clip button
-document.getElementById('clip-btn').addEventListener('click', clipPage);
+safeAddListener('clip-btn', 'click', clipPage);
 
 // Copy button
-document.getElementById('copy-btn').addEventListener('click', copyMarkdown);
+safeAddListener('copy-btn', 'click', copyMarkdown);
 
 // Settings link
-document.getElementById('settings-link').addEventListener('click', (e) => {
+safeAddListener('settings-link', 'click', (e) => {
   e.preventDefault();
-  document.getElementById('main-view').style.display = 'none';
-  document.getElementById('settings-form').classList.add('visible');
+  const mainView = document.getElementById('main-view');
+  const settingsForm = document.getElementById('settings-form');
+  if (mainView) mainView.style.display = 'none';
+  if (settingsForm) settingsForm.classList.add('visible');
 });
 
 // Back link
-document.getElementById('back-link').addEventListener('click', (e) => {
+safeAddListener('back-link', 'click', (e) => {
   e.preventDefault();
-  document.getElementById('main-view').style.display = 'block';
-  document.getElementById('settings-form').classList.remove('visible');
+  const mainView = document.getElementById('main-view');
+  const settingsForm = document.getElementById('settings-form');
+  if (mainView) mainView.style.display = 'block';
+  if (settingsForm) settingsForm.classList.remove('visible');
 });
 
 // Save button
-document.getElementById('save-btn').addEventListener('click', saveSettings);
+safeAddListener('save-btn', 'click', saveSettings);
 
 async function clipPage() {
   const btn = document.getElementById('clip-btn');
@@ -208,15 +226,25 @@ async function clipPage() {
   const preview = document.getElementById('preview');
   const stats = document.getElementById('stats');
   
+  if (!btn || !status) {
+    console.error('Required elements not found');
+    return;
+  }
+  
   btn.disabled = true;
   btn.textContent = '⏳ Extracting content...';
   status.className = 'status';
   status.style.display = 'none';
-  metadata.classList.remove('visible');
-  preview.classList.remove('visible');
-  stats.classList.remove('visible');
+  if (metadata) metadata.classList.remove('visible');
+  if (preview) preview.classList.remove('visible');
+  if (stats) stats.classList.remove('visible');
 
   try {
+    // Check if Defuddle is loaded
+    if (typeof Defuddle === 'undefined') {
+      throw new Error('Defuddle library not loaded. Please check if defuddle.min.js exists.');
+    }
+    
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -272,16 +300,20 @@ async function clipPage() {
     if (result.published) metaHtml += '<div class="item"><span>Published:</span> ' + result.published + '</div>';
     if (result.description) metaHtml += '<div class="item"><span>Desc:</span> ' + result.description.substring(0, 100) + '...</div>';
     if (result.wordCount) metaHtml += '<div class="item"><span>Words:</span> ' + result.wordCount + '</div>';
-    metadataContent.innerHTML = metaHtml;
-    metadata.classList.add('visible');
+    if (metadataContent) metadataContent.innerHTML = metaHtml;
+    if (metadata) metadata.classList.add('visible');
     
-    document.getElementById('markdown-output').textContent = markdown;
-    preview.classList.add('visible');
+    const markdownOutput = document.getElementById('markdown-output');
+    if (markdownOutput) markdownOutput.textContent = markdown;
+    if (preview) preview.classList.add('visible');
     
-    document.getElementById('stat-chars').textContent = markdown.length;
-    document.getElementById('stat-words').textContent = result.wordCount || markdown.split(/\\s+/).filter(Boolean).length;
-    document.getElementById('stat-time').textContent = result.parseTime ? result.parseTime + 'ms' : '—';
-    stats.classList.add('visible');
+    const statChars = document.getElementById('stat-chars');
+    const statWords = document.getElementById('stat-words');
+    const statTime = document.getElementById('stat-time');
+    if (statChars) statChars.textContent = markdown.length;
+    if (statWords) statWords.textContent = result.wordCount || markdown.split(/\\s+/).filter(Boolean).length;
+    if (statTime) statTime.textContent = result.parseTime ? result.parseTime + 'ms' : '—';
+    if (stats) stats.classList.add('visible');
     
     if (settings.apiUrl) {
       try {
@@ -333,28 +365,39 @@ async function clipPage() {
 function copyMarkdown() {
   navigator.clipboard.writeText(currentMarkdown).then(() => {
     const btn = document.getElementById('copy-btn');
-    btn.textContent = '✅ Copied!';
-    setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+    if (btn) {
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+    }
   });
 }
 
 function saveSettings() {
+  const apiUrlEl = document.getElementById('api-url');
+  const apiKeyEl = document.getElementById('api-key');
+  
   const settings = {
-    apiUrl: document.getElementById('api-url').value,
-    apiKey: document.getElementById('api-key').value,
+    apiUrl: apiUrlEl ? apiUrlEl.value : '',
+    apiKey: apiKeyEl ? apiKeyEl.value : '',
     includeUrl: true,
     includeTitle: true,
     includeDate: true,
     format: 'markdown'
   };
+  
   chrome.storage.sync.set({ settings }, () => {
     const btn = document.getElementById('save-btn');
-    btn.textContent = '✅ Saved!';
-    setTimeout(() => {
-      btn.textContent = '💾 Save Settings';
-      document.getElementById('main-view').style.display = 'block';
-      document.getElementById('settings-form').classList.remove('visible');
-    }, 1000);
+    const mainView = document.getElementById('main-view');
+    const settingsForm = document.getElementById('settings-form');
+    
+    if (btn) {
+      btn.textContent = '✅ Saved!';
+      setTimeout(() => {
+        btn.textContent = '💾 Save Settings';
+        if (mainView) mainView.style.display = 'block';
+        if (settingsForm) settingsForm.classList.remove('visible');
+      }, 1000);
+    }
   });
 }
 `;
