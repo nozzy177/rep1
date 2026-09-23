@@ -175,178 +175,118 @@ export default function InstallGuide() {
 </html>`;
       zip.file('popup.html', popupHtml);
       
-      // popup.js
-      const popupJs = `// Get current tab info
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  if (tabs[0]) {
-    document.getElementById('page-title').textContent = tabs[0].title || 'Untitled';
-    document.getElementById('page-url').textContent = tabs[0].url || '';
-  }
-});
-
-let currentMarkdown = '';
-
-// Clip button
-document.getElementById('clip-btn').addEventListener('click', async () => {
-  const btn = document.getElementById('clip-btn');
-  const status = document.getElementById('status');
-  const preview = document.getElementById('preview');
-  const copyBtn = document.getElementById('copy-btn');
+      // popup.js - ПРОСТАЯ ВЕРСИЯ
+      const popupJs = `
+// Ждем загрузки DOM
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Popup loaded');
   
-  btn.disabled = true;
-  btn.textContent = '⏳ Extracting...';
-  status.className = 'status';
-  status.style.display = 'none';
-  preview.classList.remove('show');
-  copyBtn.style.display = 'none';
-
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: () => {
-        const title = document.title;
-        const url = window.location.href;
+  // Получаем информацию о текущей вкладке
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    if (tabs && tabs[0]) {
+      const titleEl = document.getElementById('page-title');
+      const urlEl = document.getElementById('page-url');
+      if (titleEl) titleEl.textContent = tabs[0].title || 'Untitled';
+      if (urlEl) urlEl.textContent = tabs[0].url || '';
+    }
+  });
+  
+  let currentMarkdown = '';
+  
+  // Кнопка клип
+  const clipBtn = document.getElementById('clip-btn');
+  if (clipBtn) {
+    clipBtn.addEventListener('click', async function() {
+      console.log('Clip button clicked');
+      
+      const btn = this;
+      const status = document.getElementById('status');
+      const preview = document.getElementById('preview');
+      const copyBtn = document.getElementById('copy-btn');
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Extracting...';
+      
+      try {
+        // Получаем текущую вкладку
+        const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+        const tab = tabs[0];
         
-        // Try to find main content
-        const selectors = ['article', 'main', '[role="main"]', '.content', '.post', '.article'];
-        let contentEl = null;
-        
-        for (const selector of selectors) {
-          contentEl = document.querySelector(selector);
-          if (contentEl && contentEl.textContent.length > 200) {
-            break;
+        // Внедряем скрипт для получения контента
+        const results = await chrome.scripting.executeScript({
+          target: {tabId: tab.id},
+          function: () => {
+            // Простое извлечение текста
+            const title = document.title;
+            const url = window.location.href;
+            
+            // Получаем основной контент
+            let content = '';
+            const article = document.querySelector('article') || 
+                           document.querySelector('main') || 
+                           document.querySelector('[role="main"]') ||
+                           document.body;
+            
+            // Клонируем и очищаем
+            const clone = article.cloneNode(true);
+            
+            // Удаляем ненужное
+            clone.querySelectorAll('script, style, nav, footer, iframe, noscript, .ad, .ads, .sidebar, .comments, nav, .menu').forEach(el => el.remove());
+            
+            content = clone.textContent || clone.innerText || '';
+            
+            return {title, url, content: content.trim()};
           }
-        }
-        
-        if (!contentEl) {
-          contentEl = document.body;
-        }
-        
-        // Clone and clean
-        const clone = contentEl.cloneNode(true);
-        
-        // Remove unwanted elements
-        const removeSelectors = ['script', 'style', 'nav', 'footer', 'iframe', 'noscript', '.ad', '.ads', '.advertisement', '.sidebar', '.comments', '.comment', '.nav', '.navigation', '.menu'];
-        removeSelectors.forEach(selector => {
-          clone.querySelectorAll(selector).forEach(el => el.remove());
         });
         
-        return {
-          title: title,
-          url: url,
-          html: clone.innerHTML,
-          text: (clone.textContent || '').trim()
-        };
+        const data = results[0].result;
+        
+        // Создаем простой Markdown
+        let markdown = '# ' + data.title + '\\n\\n';
+        markdown += '> Source: ' + data.url + '\\n\\n';
+        markdown += '> Clipped: ' + new Date().toLocaleString() + '\\n\\n---\\n\\n';
+        markdown += data.content;
+        
+        currentMarkdown = markdown;
+        
+        // Показываем результат
+        const output = document.getElementById('markdown-output');
+        if (output) output.textContent = markdown;
+        if (preview) preview.classList.add('show');
+        if (copyBtn) copyBtn.style.display = 'block';
+        
+        if (status) {
+          status.textContent = '✅ Clipped successfully!';
+          status.className = 'status success';
+        }
+        
+      } catch (err) {
+        console.error('Error:', err);
+        if (status) {
+          status.textContent = '❌ Error: ' + err.message;
+          status.className = 'status error';
+        }
       }
+      
+      btn.disabled = false;
+      btn.textContent = '📋 Clip This Page';
     });
-
-    const pageData = results[0].result;
-    
-    // Simple HTML to Markdown conversion
-    let markdown = '';
-    markdown += '# ' + pageData.title + '\\n\\n';
-    markdown += '> Source: [' + pageData.url + '](' + pageData.url + ')\\n\\n';
-    markdown += '> Clipped: ' + new Date().toLocaleString() + '\\n\\n---\\n\\n';
-    
-    // Convert HTML to simple markdown
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = pageData.html;
-    
-    // Process headings
-    tempDiv.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
-      const level = parseInt(heading.tagName[1]);
-      const prefix = '#'.repeat(level);
-      heading.innerHTML = prefix + ' ' + heading.textContent;
-    });
-    
-    // Process links
-    tempDiv.querySelectorAll('a').forEach(link => {
-      const href = link.getAttribute('href');
-      const text = link.textContent;
-      if (href && text) {
-        link.innerHTML = '[' + text + '](' + href + ')';
-      }
-    });
-    
-    // Process bold and italic
-    tempDiv.querySelectorAll('strong, b').forEach(el => {
-      el.innerHTML = '**' + el.textContent + '**';
-    });
-    tempDiv.querySelectorAll('em, i').forEach(el => {
-      el.innerHTML = '*' + el.textContent + '*';
-    });
-    
-    // Process lists
-    tempDiv.querySelectorAll('ul').forEach(ul => {
-      let listText = '';
-      ul.querySelectorAll('li').forEach(li => {
-        listText += '- ' + li.textContent.trim() + '\\n';
-      });
-      ul.innerHTML = listText;
-    });
-    
-    tempDiv.querySelectorAll('ol').forEach(ol => {
-      let listText = '';
-      let counter = 1;
-      ol.querySelectorAll('li').forEach(li => {
-        listText += counter + '. ' + li.textContent.trim() + '\\n';
-        counter++;
-      });
-      ol.innerHTML = listText;
-    });
-    
-    // Process code blocks
-    tempDiv.querySelectorAll('pre code').forEach(code => {
-      code.innerHTML = '\`\`\`\\n' + code.textContent + '\\n\`\`\`';
-    });
-    
-    // Process blockquotes
-    tempDiv.querySelectorAll('blockquote').forEach(bq => {
-      const lines = bq.textContent.split('\\n');
-      bq.innerHTML = lines.map(line => '> ' + line).join('\\n');
-    });
-    
-    // Get final text
-    const content = tempDiv.textContent || tempDiv.innerText || '';
-    
-    // Clean up extra whitespace
-    markdown += content
-      .replace(/\\n{3,}/g, '\\n\\n')
-      .replace(/[ \\t]+/g, ' ')
-      .trim();
-    
-    currentMarkdown = markdown;
-    
-    // Show preview
-    document.getElementById('markdown-output').textContent = markdown;
-    preview.classList.add('show');
-    copyBtn.style.display = 'block';
-    
-    status.textContent = '✅ Clipped successfully!';
-    status.className = 'status success';
-    
-  } catch (err) {
-    status.textContent = '❌ Error: ' + err.message;
-    status.className = 'status error';
-    console.error('Clip error:', err);
   }
   
-  btn.disabled = false;
-  btn.textContent = '📋 Clip This Page';
+  // Кнопка копирования
+  const copyBtn = document.getElementById('copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function() {
+      navigator.clipboard.writeText(currentMarkdown).then(() => {
+        this.textContent = '✅ Copied!';
+        setTimeout(() => {
+          this.textContent = '📋 Copy Markdown';
+        }, 2000);
+      });
+    });
+  }
 });
-
-// Copy button
-document.getElementById('copy-btn').addEventListener('click', () => {
-  navigator.clipboard.writeText(currentMarkdown).then(() => {
-    const btn = document.getElementById('copy-btn');
-    btn.textContent = '✅ Copied!';
-    setTimeout(() => {
-      btn.textContent = '📋 Copy Markdown';
-    }, 2000);
-  });
-});`;
+`;
       zip.file('popup.js', popupJs);
       
       // Generate ZIP
