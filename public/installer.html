@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Clipper — Скачать расширение</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;background:linear-gradient(135deg,#0f172a,#581c87,#0f172a);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;padding:20px;color:#e2e8f0}
+.box{max-width:440px;width:100%}
+.hdr{text-align:center;margin-bottom:24px}
+.logo{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:12px;box-shadow:0 8px 24px rgba(139,92,246,.3)}
+h1{font-size:24px;font-weight:700}
+.sub{font-size:14px;color:#94a3b8;margin-top:4px}
+.card{background:rgba(30,41,59,.7);backdrop-filter:blur(12px);border:1px solid rgba(71,85,105,.5);border-radius:16px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,.3)}
+.btn{width:100%;padding:16px;border:none;border-radius:16px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 8px 24px rgba(139,92,246,.3);transition:transform .15s}
+.btn:hover{transform:scale(1.02);box-shadow:0 12px 32px rgba(139,92,246,.5)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.ok{background:linear-gradient(135deg,#22c55e,#16a34a)}
+.hint{text-align:center;font-size:12px;color:#94a3b8;margin:8px 0 20px}
+.steps{background:rgba(15,23,42,.5);border-radius:12px;padding:16px;border:1px solid rgba(51,65,85,.5)}
+.steps h3{font-size:14px;font-weight:600;margin-bottom:12px}
+.st{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.st:last-child{margin-bottom:0}
+.sn{width:28px;height:28px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 4px 12px rgba(59,130,246,.3)}
+.sn.g{background:#22c55e;box-shadow:0 4px 12px rgba(34,197,94,.3)}
+.st p{font-size:13px;color:#cbd5e1}
+.st strong{color:#fff}
+.st .h{font-size:11px;color:#64748b;margin-top:2px}
+.tip{margin-top:12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:12px}
+.tip p{font-size:12px;color:#fbbf24}
+.foot{text-align:center;font-size:11px;color:#475569;margin-top:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sp{width:20px;height:20px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="hdr">
+    <div class="logo">📋</div>
+    <h1>Web Clipper</h1>
+    <p class="sub">Chrome Extension • Clip pages to Markdown</p>
+  </div>
+  <div class="card">
+    <button class="btn" id="dlBtn">
+      <span style="font-size:22px">⬇</span> Скачать расширение
+    </button>
+    <p class="hint">ZIP-архив • Defuddle уже внутри • Готово к установке</p>
+    <div class="steps">
+      <h3>📖 Как установить:</h3>
+      <div class="st"><div class="sn">1</div><div><p><strong>Распакуйте ZIP</strong></p><p class="h">Скачайте файл выше и распакуйте в любую папку</p></div></div>
+      <div class="st"><div class="sn">2</div><div><p><strong>Откройте chrome://extensions/</strong></p><p class="h">Вставьте эту ссылку в адресную строку Chrome. Включите «Режим разработчика» справа вверху.</p></div></div>
+      <div class="st"><div class="sn">3</div><div><p><strong>«Загрузить распакованное расширение»</strong></p><p class="h">Нажмите эту кнопку и выберите папку из шага 1</p></div></div>
+      <div class="st"><div class="sn g">✓</div><div><p><strong>Готово!</strong> Иконка 📋 появится в Chrome</p></div></div>
+    </div>
+    <div class="tip"><p>💡 <strong>Закрепите:</strong> нажмите 🧩 в правом верхнем углу Chrome → найдите Web Clipper → нажмите 📌</p></div>
+  </div>
+  <p class="foot">Web Clipper v1.1 • Powered by Defuddle</p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script>
+// Манифест БЕЗ иконок
+const M=JSON.stringify({
+  manifest_version:3,
+  name:"Web Clipper",
+  version:"1.1.0",
+  description:"Clip web pages as Markdown via Defuddle",
+  permissions:["activeTab","storage","scripting"],
+  action:{default_popup:"popup.html"},
+  background:{service_worker:"background.js"}
+},null,2);
+
+const BG=`chrome.runtime.onInstalled.addListener(()=>{chrome.storage.sync.get(['s'],r=>{if(!r.s)chrome.storage.sync.set({s:{apiUrl:'',apiKey:'',includeUrl:true,includeTitle:true,includeDate:true}})})});`;
+
+// popup.html БЕЗ onclick атрибутов
+const PH=`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:400px;min-height:320px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1e293b;color:#e2e8f0;padding:16px}
+.hd{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.hd h1{font-size:16px;font-weight:600}
+.hd .ic{width:28px;height:28px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.hd .bd{font-size:9px;background:rgba(139,92,246,.2);color:#a78bfa;padding:2px 6px;border-radius:4px;border:1px solid rgba(139,92,246,.3)}
+.pi{background:#334155;border-radius:8px;padding:10px;margin-bottom:12px;border:1px solid #475569}
+.pi .t{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi .u{font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.cb{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(139,92,246,.3)}
+.cb:hover{opacity:.9}
+.cb:disabled{opacity:.5;cursor:not-allowed}
+.st{margin-top:10px;padding:8px 10px;border-radius:8px;font-size:12px;display:none}
+.st.s{display:block;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80}
+.st.e{display:block;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171}
+.mt{margin-top:10px;background:rgba(51,65,85,.5);border-radius:8px;padding:8px 10px;border:1px solid rgba(71,85,105,.5);display:none}
+.mt.v{display:block}
+.mt .l{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px}
+.mt .i{font-size:11px;color:#cbd5e1;margin-bottom:2px}
+.mt .i span{color:#64748b}
+.pv{margin-top:12px;display:none}
+.pv.v{display:block}
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ph span{font-size:11px;color:#94a3b8}
+.cpb{font-size:11px;color:#60a5fa;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px}
+.pc{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;max-height:180px;overflow-y:auto}
+.pc pre{font-size:11px;white-space:pre-wrap;color:#cbd5e1;font-family:'SF Mono',monospace;line-height:1.5}
+.ss{margin-top:12px;display:none;grid-template-columns:repeat(4,1fr);gap:6px}
+.ss.v{display:grid}
+.si{background:rgba(51,65,85,.3);border-radius:6px;padding:6px;text-align:center;border:1px solid rgba(71,85,105,.3)}
+.si .v{font-size:14px;font-weight:700;color:#fff}
+.si .l{font-size:9px;color:#64748b;margin-top:2px}
+.sl{display:block;text-align:center;margin-top:14px;font-size:11px;color:#94a3b8;text-decoration:none;padding:6px;border-radius:6px}
+.sl:hover{color:#e2e8f0;background:rgba(51,65,85,.3)}
+.sf{display:none}
+.sf.v{display:block}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;font-weight:500}
+.fg input{width:100%;padding:8px 10px;background:#334155;border:1px solid #475569;border-radius:8px;color:#e2e8f0;font-size:12px}
+.fg input:focus{outline:none;border-color:#8b5cf6}
+.fg .h{font-size:10px;color:#64748b;margin-top:3px}
+.sb{width:100%;padding:10px;border:none;border-radius:8px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px}
+.pw{text-align:center;margin-top:8px;font-size:10px;color:#475569}
+.pw a{color:#64748b;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="hd"><div class="ic">📋</div><h1>Web Clipper</h1><span class="bd">Defuddle</span></div>
+<div id="mv">
+  <div class="pi"><div class="t" id="pt">Loading...</div><div class="u" id="pu">...</div></div>
+  <button class="cb" id="cb">📋 Clip This Page</button>
+  <div class="st" id="st"></div>
+  <div class="mt" id="mt"><div class="l">Extracted Metadata</div><div id="mc"></div></div>
+  <div class="pv" id="pv">
+    <div class="ph"><span>📝 Markdown Output</span><button class="cpb" id="cpb">📋 Copy</button></div>
+    <div class="pc"><pre id="mo"></pre></div>
+  </div>
+  <div class="ss" id="ss">
+    <div class="si"><div class="v" id="sc">—</div><div class="l">Chars</div></div>
+    <div class="si"><div class="v" id="sw">—</div><div class="l">Words</div></div>
+    <div class="si"><div class="v" id="stm">—</div><div class="l">Parse</div></div>
+    <div class="si"><div class="v" id="sf">MD</div><div class="l">Format</div></div>
+  </div>
+  <a href="#" class="sl" id="slk">⚙️ Settings</a>
+  <div class="pw">Powered by <a href="https://github.com/kepano/defuddle" target="_blank">Defuddle</a></div>
+</div>
+<div class="sf" id="sf2">
+  <div class="fg"><label>API Endpoint URL</label><input type="url" id="au" placeholder="https://your-api.com/api/clip"><div class="h">Content will be POSTed here as JSON</div></div>
+  <div class="fg"><label>API Key (optional)</label><input type="password" id="ak" placeholder="Bearer token"><div class="h">Sent as Authorization: Bearer header</div></div>
+  <button class="sb" id="svb">💾 Save Settings</button>
+  <a href="#" class="sl" id="bkl">← Back</a>
+</div>
+<script src="defuddle.min.js"><\\/script>
+<script src="popup.js"><\\/script>
+</body>
+</html>`;
+
+// popup.js с addEventListener вместо onclick
+const PJ=`
+// Helper function to safely add event listeners
+function safeAddListener(id, event, handler) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener(event, handler);
+  } else {
+    console.error('Element not found:', id);
+  }
+}
+
+chrome.tabs.query({active:true,currentWindow:true},t=>{
+  if(t[0]){
+    const pt=document.getElementById('pt');
+    const pu=document.getElementById('pu');
+    if(pt)pt.textContent=t[0].title||'Untitled';
+    if(pu)pu.textContent=t[0].url||'';
+  }
+});
+
+chrome.storage.sync.get(['s'],r=>{
+  if(r.s){
+    const au=document.getElementById('au');
+    const ak=document.getElementById('ak');
+    if(au)au.value=r.s.apiUrl||'';
+    if(ak)ak.value=r.s.apiKey||'';
+  }
+});
+
+let md='';
+
+safeAddListener('cb','click',cp);
+safeAddListener('cpb','click',cm);
+safeAddListener('slk','click',ss2);
+safeAddListener('bkl','click',sm);
+safeAddListener('svb','click',sv);
+
+async function cp(){
+  const b=document.getElementById('cb'),st=document.getElementById('st'),mt=document.getElementById('mt'),pv=document.getElementById('pv'),ss=document.getElementById('ss');
+  if(!b||!st){console.error('Required elements not found');return;}
+  b.disabled=true;
+  b.textContent='⏳ Extracting...';
+  st.className='st';
+  st.style.display='none';
+  if(mt)mt.classList.remove('v');
+  if(pv)pv.classList.remove('v');
+  if(ss)ss.classList.remove('v');
+  try{
+    if(typeof Defuddle==='undefined'){throw new Error('Defuddle library not loaded. Please check if defuddle.min.js exists.');}
+    const [t]=await chrome.tabs.query({active:true,currentWindow:true});
+    const rs=await chrome.scripting.executeScript({target:{tabId:t.id},function:()=>({title:document.title,url:window.location.href,html:document.documentElement.outerHTML})});
+    const pd=rs[0].result;
+    const doc=new DOMParser().parseFromString(pd.html,'text/html');
+    const df=new Defuddle(doc,{url:pd.url,markdown:true,removeHiddenElements:true,removeLowScoring:true,removeSmallImages:true,standardize:true});
+    const r=df.parse();
+    const s=(await chrome.storage.sync.get(['s'])).s||{};
+    let m='';
+    if(s.includeTitle!==false&&r.title)m+='# '+r.title+'\\n\\n';
+    if(s.includeUrl!==false)m+='> Source: ['+pd.url+']('+pd.url+')\\n\\n';
+    if(s.includeDate!==false){m+='> Clipped: '+(r.published||new Date().toLocaleString())+'\\n\\n---\\n\\n';}
+    if(r.author)m+='> Author: '+r.author+'\\n\\n';
+    m+=r.content||'';
+    md=m;
+    const mc=document.getElementById('mc');
+    let h='';
+    if(r.title)h+='<div class="i"><span>Title:</span> '+r.title+'</div>';
+    if(r.author)h+='<div class="i"><span>Author:</span> '+r.author+'</div>';
+    if(r.published)h+='<div class="i"><span>Published:</span> '+r.published+'</div>';
+    if(r.description)h+='<div class="i"><span>Desc:</span> '+r.description.substring(0,100)+'...</div>';
+    if(mc)mc.innerHTML=h;
+    if(mt)mt.classList.add('v');
+    const mo=document.getElementById('mo');
+    if(mo)mo.textContent=m;
+    if(pv)pv.classList.add('v');
+    const sc=document.getElementById('sc');
+    const sw=document.getElementById('sw');
+    const stm=document.getElementById('stm');
+    if(sc)sc.textContent=m.length;
+    if(sw)sw.textContent=r.wordCount||m.split(/\\s+/).filter(Boolean).length;
+    if(stm)stm.textContent=r.parseTime?r.parseTime+'ms':'—';
+    if(ss)ss.classList.add('v');
+    if(s.apiUrl){
+      try{
+        const hd={'Content-Type':'application/json'};
+        if(s.apiKey)hd['Authorization']='Bearer '+s.apiKey;
+        const rp=await fetch(s.apiUrl,{method:'POST',headers:hd,body:JSON.stringify({url:pd.url,title:r.title||pd.title,author:r.author,published:r.published,description:r.description,content:m,format:'markdown',clippedAt:new Date().toISOString()})});
+        st.textContent=rp.ok?'✅ Sent to API!':'✅ Clipped! (API: '+rp.status+')';
+        st.className='st s';
+      }catch(e){
+        st.textContent='✅ Clipped! (API error: '+e.message+')';
+        st.className='st s';
+      }
+    }else{
+      st.textContent='✅ Clipped! Set API URL in Settings to auto-send.';
+      st.className='st s';
+    }
+  }catch(e){
+    st.textContent='❌ '+e.message;
+    st.className='st e';
+  }
+  b.disabled=false;
+  b.textContent='📋 Clip This Page';
+}
+
+function cm(){
+  navigator.clipboard.writeText(md).then(()=>{
+    const b=document.getElementById('cpb');
+    if(b){
+      b.textContent='✅ Copied!';
+      setTimeout(()=>{b.textContent='📋 Copy';},2000);
+    }
+  });
+}
+
+function ss2(e){
+  e.preventDefault();
+  const mv=document.getElementById('mv');
+  const sf2=document.getElementById('sf2');
+  if(mv)mv.style.display='none';
+  if(sf2)sf2.classList.add('v');
+}
+
+function sm(e){
+  e.preventDefault();
+  const mv=document.getElementById('mv');
+  const sf2=document.getElementById('sf2');
+  if(mv)mv.style.display='block';
+  if(sf2)sf2.classList.remove('v');
+}
+
+function sv(){
+  const au=document.getElementById('au');
+  const ak=document.getElementById('ak');
+  chrome.storage.sync.set({s:{apiUrl:au?au.value:'',apiKey:ak?ak.value:'',includeUrl:true,includeTitle:true,includeDate:true,format:'markdown'}},()=>{
+    const b=document.getElementById('svb');
+    if(b){
+      b.textContent='✅ Saved!';
+      setTimeout(()=>{
+        b.textContent='💾 Save Settings';
+        sm(new Event('click'));
+      },1000);
+    }
+  });
+}
+`;
+
+const RM=`# Web Clipper — Chrome Extension\n\n## Установка\n\n1. Распакуйте этот ZIP в любую папку\n2. Откройте Chrome → chrome://extensions/\n3. Включите «Режим разработчика» (справа вверху)\n4. Нажмите «Загрузить распакованное расширение»\n5. Выберите папку\n6. Готово!\n\n## Использование\n\n1. Откройте любую страницу\n2. Нажмите на иконку расширения 📋\n3. Нажмите «Clip This Page»\n4. Контент извлечён и конвертирован в Markdown!\n\n## Настройка API\n\nВ popup нажмите ⚙️ Settings и укажите URL вашего API.\n`;
+
+// Обработчик кнопки скачивания
+document.getElementById('dlBtn').addEventListener('click', async function() {
+  const b = this;
+  b.disabled = true;
+  b.innerHTML = '<div class="sp"></div> Скачиваю Defuddle...';
+  
+  try {
+    let dc = '';
+    try {
+      const r = await fetch('https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js');
+      if (r.ok) {
+        dc = await r.text();
+      } else {
+        throw 0;
+      }
+    } catch (e) {
+      dc = '// Скачайте вручную: https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js\n// Сохраните как defuddle.min.js в эту папку.\n';
+    }
+    
+    b.innerHTML = '<div class="sp"></div> Упаковываю...';
+    
+    const z = new JSZip();
+    z.file('manifest.json', M);
+    z.file('background.js', BG);
+    z.file('popup.html', PH);
+    z.file('popup.js', PJ);
+    z.file('defuddle.min.js', dc);
+    z.file('README.md', RM);
+    // НЕ создаём папку icons
+    
+    const bl = await z.generateAsync({ type: 'blob' });
+    saveAs(bl, 'web-clipper-extension.zip');
+    
+    b.innerHTML = '✅ Скачано!';
+    b.classList.add('ok');
+    
+    setTimeout(() => {
+      b.innerHTML = '<span style="font-size:22px">⬇</span> Скачать ещё раз';
+      b.classList.remove('ok');
+      b.disabled = false;
+    }, 3000);
+  } catch (e) {
+    b.innerHTML = '❌ Ошибка — нажмите ещё раз';
+    b.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

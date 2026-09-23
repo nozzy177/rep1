@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Web Clipper",
+  "version": "1.0.0",
+  "description": "Clip web pages and send them as Markdown to your API",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
