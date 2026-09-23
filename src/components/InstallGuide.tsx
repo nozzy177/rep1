@@ -368,91 +368,97 @@ function saveSettings() {
 }
 `;
 
-const README_MD = `# Web Clipper Chrome Extension
+const README_MD = `# Web Clipper — Chrome Extension
 
-> Powered by [Defuddle](https://github.com/kepano/defuddle) — intelligent content extraction
+> 🧠 Powered by [Defuddle](https://github.com/kepano/defuddle) — интеллектуальное извлечение контента
 
-## What is this?
+## Что это?
 
-A Chrome extension that extracts the **main content** from any web page (removing navigation, ads, sidebars, comments, etc.) and converts it to clean Markdown. The result is sent to your configured API endpoint.
+Расширение для Chrome, которое извлекает **основной контент** с любой веб-страницы
+(удаляя навигацию, рекламу, сайдбары, комментарии и т.д.) и конвертирует его в чистый Markdown.
+Результат отправляется на ваш API-эндпоинт.
 
-## Features
+## Возможности
 
-- 🧠 **Smart content extraction** via Defuddle — removes clutter automatically
-- 📝 **Clean Markdown output** with proper formatting
-- 📊 **Metadata extraction** — title, author, publish date, description
-- 🔗 **API integration** — POST clipped content to any endpoint
-- 🔑 **Authentication** — Bearer token support
-- ⚡ **Fast** — content extraction happens locally in the browser
+- 🧠 **Умное извлечение контента** через Defuddle — автоматически убирает мусор
+- 📝 **Чистый Markdown** с правильным форматированием
+- 📊 **Извлечение метаданных** — заголовок, автор, дата публикации, описание
+- 🔗 **Интеграция с API** — отправка клипнутого контента на любой эндпоинт
+- 🔑 **Аутентификация** — поддержка Bearer-токена
+- ⚡ **Быстро** — извлечение контента происходит локально в браузере
 
-## Installation
+## Установка
 
-1. Download and extract the ZIP file
-2. Download Defuddle library:
-   - Go to https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js
-   - Save it as \`defuddle.min.js\` in the extension folder
-3. Open Chrome → \`chrome://extensions/\`
-4. Enable "Developer mode" (toggle in top right)
-5. Click "Load unpacked"
-6. Select the extracted folder
-7. The extension icon will appear in your toolbar
+1. Распакуйте этот ZIP-файл в любую папку
+2. Откройте Chrome → \`chrome://extensions/\`
+3. Включите **"Режим разработчика"** (переключатель справа вверху)
+4. Нажмите **"Загрузить распакованное расширение"**
+5. Выберите папку с распакованными файлами
+6. Готово! Иконка 📋 появится в панели Chrome
 
-## Usage
+> 💡 **Совет:** закрепите расширение — нажмите на иконку пазла 🧩 в Chrome
+> и нажмите 📌 рядом с "Web Clipper".
 
-1. Navigate to any web page
-2. Click the Web Clipper extension icon
-3. Click "Clip This Page"
-4. Defuddle extracts the main content and converts to Markdown
-5. Review the metadata and preview
-6. If an API URL is configured, content is sent automatically
+## Использование
 
-## Configuration
+1. Откройте любую веб-страницу
+2. Нажмите на иконку расширения Web Clipper
+3. Нажмите **"Clip This Page"**
+4. Defuddle извлечёт основной контент и конвертирует в Markdown
+5. Проверьте метаданные и превью
+6. Если настроен API URL — контент отправится автоматически
 
-Click "Settings" in the popup to configure:
-- **API Endpoint URL**: Where to send clipped content (POST request)
-- **API Key**: Optional Bearer token for authentication
+## Настройка
 
-## API Format
+Нажмите **"Settings"** в popup-окне расширения:
+- **API Endpoint URL** — куда отправлять контент (POST-запрос)
+- **API Key** — опциональный Bearer-токен для аутентификации
 
-The extension sends a POST request with this JSON body:
+## Формат API-запроса
+
+Расширение отправляет POST-запрос с JSON-телом:
 
 \`\`\`json
 {
   "url": "https://example.com/article",
-  "title": "Article Title",
-  "author": "John Doe",
+  "title": "Заголовок статьи",
+  "author": "Имя автора",
   "published": "2024-01-15",
-  "description": "Article summary...",
-  "content": "# Markdown content...",
+  "description": "Краткое описание...",
+  "content": "# Markdown контент...",
   "format": "markdown",
   "clippedAt": "2024-01-20T12:00:00.000Z"
 }
 \`\`\`
 
-## How Defuddle works
+## Как работает Defuddle
 
-Defuddle is a content extraction library created by the author of Obsidian. It:
-- Finds the main content area using scoring algorithms
-- Removes navigation, ads, sidebars, footers, comments
-- Handles footnotes, code blocks, math equations
-- Extracts metadata from schema.org, meta tags, etc.
-- Converts cleaned HTML to Markdown
+Defuddle — библиотека извлечения контента от создателя Obsidian:
+- Находит основную область контента с помощью алгоритма скоринга
+- Удаляет навигацию, рекламу, сайдбары, футеры, комментарии
+- Обрабатывает сноски, блоки кода, математические формулы
+- Извлекает метаданные из schema.org, meta-тегов и т.д.
+- Конвертирует очищенный HTML в Markdown
 
-## Files
+## Файлы
 
-| File | Description |
-|------|-------------|
-| \`manifest.json\` | Extension manifest (v3) |
-| \`popup.html\` | Popup UI |
-| \`popup.js\` | Popup logic with Defuddle integration |
-| \`background.js\` | Background service worker |
-| \`defuddle.min.js\` | Defuddle library (download separately) |
+| Файл | Описание |
+|------|----------|
+| \`manifest.json\` | Манифест расширения (v3) |
+| \`popup.html\` | Интерфейс popup-окна |
+| \`popup.js\` | Логика popup с интеграцией Defuddle |
+| \`background.js\` | Фоновый service worker |
+| \`defuddle.min.js\` | Библиотека Defuddle (уже включена!) |
+| \`icons/\` | Папка для иконок расширения |
 
-## Troubleshooting
+## Устранение неполадок
 
-- If content extraction seems off, try using the \`contentSelector\` option
-- Some SPAs may not work — Defuddle needs server-rendered HTML
-- Check the browser console for errors (right-click extension → inspect)
+- Если извлечение контента работает некорректно — попробуйте опцию \`contentSelector\`
+- Некоторые SPA могут не работать — Defuddle нужен server-rendered HTML
+- Проверьте консоль браузера на ошибки (правый клик на расширении → inspect)
+- Если Defuddle не загрузился — скачайте вручную:
+  https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js
+  и сохраните как \`defuddle.min.js\` в папку расширения
 `;
 
 export default function InstallGuide() {
@@ -484,19 +490,25 @@ export default function InstallGuide() {
         iconsFolder.file('README.txt', 'Replace these with actual PNG icons (16x16, 48x48, 128x128).\nYou can use any icon editor or online tool to create them.\n\nOr remove the icon references from manifest.json to use the default Chrome extension icon.');
       }
 
-      // Add a download script for Defuddle
-      zip.file('download-defuddle.sh', `#!/bin/bash
-# Download Defuddle library for the extension
-echo "Downloading Defuddle..."
-curl -L "https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js" -o defuddle.min.js
-echo "Done! File saved as defuddle.min.js"
-`);
-
-      zip.file('download-defuddle.ps1', `# Download Defuddle library for the extension
-Write-Host "Downloading Defuddle..."
-Invoke-WebRequest -Uri "https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js" -OutFile "defuddle.min.js"
-Write-Host "Done! File saved as defuddle.min.js"
-`);
+      // Download Defuddle library from CDN and include it in the ZIP
+      try {
+        const defuddleResponse = await fetch('https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js');
+        if (defuddleResponse.ok) {
+          const defuddleCode = await defuddleResponse.text();
+          zip.file('defuddle.min.js', defuddleCode);
+        } else {
+          throw new Error('Failed to fetch Defuddle');
+        }
+      } catch (fetchErr) {
+        // Fallback: add a note if CDN is unreachable
+        zip.file('defuddle.min.js', 
+          '// ERROR: Could not download Defuddle from CDN.\n' +
+          '// Please download manually from:\n' +
+          '// https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js\n' +
+          '// and save it as defuddle.min.js in this folder.\n'
+        );
+        console.warn('Could not download Defuddle from CDN:', fetchErr);
+      }
       
       // Generate and download ZIP
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -556,16 +568,23 @@ Write-Host "Done! File saved as defuddle.min.js"
           </>
         )}
       </button>
+      
+      <p className="text-[11px] text-slate-500 text-center -mt-2 mb-4">
+        Defuddle library included • Ready to install
+      </p>
 
       {/* Installation Steps */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-slate-300">Installation Steps:</h3>
+        <h3 className="text-sm font-medium text-slate-300">Установка в Chrome (3 шага):</h3>
         
         <div className="flex gap-3 items-start">
           <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
             <span className="text-xs font-bold text-blue-400">1</span>
           </div>
-          <p className="text-sm text-slate-300">Download & extract the ZIP file</p>
+          <div className="text-sm text-slate-300">
+            <p><strong>Скачайте ZIP</strong> (кнопка выше) и распакуйте в любую папку.</p>
+            <p className="text-xs text-slate-500 mt-1">Внутри уже есть Defuddle — ничего дополнительно скачивать не нужно.</p>
+          </div>
         </div>
         
         <div className="flex gap-3 items-start">
@@ -573,11 +592,8 @@ Write-Host "Done! File saved as defuddle.min.js"
             <span className="text-xs font-bold text-blue-400">2</span>
           </div>
           <div className="text-sm text-slate-300">
-            <p>Download Defuddle library into the folder:</p>
-            <code className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded mt-1 inline-block">
-              curl -L "https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js" -o defuddle.min.js
-            </code>
-            <p className="text-xs text-slate-500 mt-1">Or use the included download scripts</p>
+            <p>В Chrome откройте: <code className="text-purple-400 bg-purple-500/10 px-1 rounded">chrome://extensions/</code></p>
+            <p className="text-xs text-slate-500 mt-1">Включите <strong>"Режим разработчика"</strong> (переключатель справа вверху).</p>
           </div>
         </div>
         
@@ -585,29 +601,29 @@ Write-Host "Done! File saved as defuddle.min.js"
           <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
             <span className="text-xs font-bold text-blue-400">3</span>
           </div>
-          <p className="text-sm text-slate-300">Open Chrome → <code className="text-purple-400 bg-purple-500/10 px-1 rounded">chrome://extensions/</code></p>
-        </div>
-        
-        <div className="flex gap-3 items-start">
-          <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-xs font-bold text-blue-400">4</span>
+          <div className="text-sm text-slate-300">
+            <p>Нажмите <strong>"Загрузить распакованное расширение"</strong> и выберите папку с ZIP.</p>
           </div>
-          <p className="text-sm text-slate-300">Enable <strong>"Developer mode"</strong> (top right toggle)</p>
-        </div>
-        
-        <div className="flex gap-3 items-start">
-          <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-xs font-bold text-blue-400">5</span>
-          </div>
-          <p className="text-sm text-slate-300">Click <strong>"Load unpacked"</strong> → select extracted folder</p>
         </div>
         
         <div className="flex gap-3 items-start">
           <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
             <span className="text-xs font-bold text-green-400">✓</span>
           </div>
-          <p className="text-sm text-slate-300">Extension icon appears — ready to clip!</p>
+          <p className="text-sm text-slate-300">Готово! Иконка 📋 появится в панели Chrome.</p>
         </div>
+      </div>
+
+      {/* Quick tip */}
+      <div className="mt-3 bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+        <p className="text-xs text-green-300 flex items-start gap-2">
+          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span>
+            <strong>Совет:</strong> закрепите расширение — нажмите на иконку пазла 🧩 в Chrome и нажмите 📌 рядом с "Web Clipper".
+          </span>
+        </p>
       </div>
 
       {/* Defuddle Info */}
