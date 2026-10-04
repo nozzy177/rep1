@@ -31,12 +31,14 @@ document.getElementById('clip-btn').addEventListener('click', async () => {
   try {
     const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
     
-    // Проверяем что это обычная страница (не chrome:// или extension://)
-    if (tab.url.startsWith('chrome://') || 
-        tab.url.startsWith('chrome-extension://') || 
-        tab.url.startsWith('edge://') ||
-        tab.url.startsWith('about:')) {
-      throw new Error('Нельзя клипать служебные страницы Chrome. Откройте обычную веб-страницу.');
+    // Проверяем что это обычная веб-страница
+    const url = tab.url || '';
+    if (url.startsWith('chrome://') || 
+        url.startsWith('chrome-extension://') || 
+        url.startsWith('about:') || 
+        url.startsWith('edge://') ||
+        url.startsWith('devtools://')) {
+      throw new Error('Нельзя клипать системные страницы Chrome. Откройте обычную веб-страницу (https://...).');
     }
     
     console.log('Executing script in page...');
@@ -66,7 +68,7 @@ document.getElementById('clip-btn').addEventListener('click', async () => {
     });
 
     const data = results[0].result;
-    console.log('Extracted content, length:', data.content.length);
+    console.log('Extracted data:', data);
     
     // Создаем простой Markdown
     let markdown = '# ' + data.title + '\n\n';
@@ -83,7 +85,6 @@ document.getElementById('clip-btn').addEventListener('click', async () => {
     
     status.textContent = '✅ Clipped successfully!';
     status.className = 'status success';
-    console.log('=== CLIPPING COMPLETED ===');
     
   } catch (err) {
     console.error('Error:', err);
