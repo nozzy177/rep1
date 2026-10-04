@@ -16,9 +16,10 @@ export default function InstallGuide() {
       const manifest = {
         manifest_version: 3,
         name: "Web Clipper",
-        version: "1.0.0",
+        version: "1.1.0",
         description: "Clip web pages as Markdown",
         permissions: ["activeTab", "storage", "scripting"],
+        host_permissions: ["<all_urls>"],
         action: {
           default_popup: "popup.html"
         },
