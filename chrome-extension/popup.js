@@ -1,7 +1,7 @@
 console.log('=== popup.js LOADED ===');
 
-// Получаем информацию о текущей вкладке
-chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+// Показываем информацию о странице сразу
+chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
   console.log('Got tabs:', tabs);
   if (tabs && tabs[0]) {
     document.getElementById('page-title').textContent = tabs[0].title || 'Untitled';
@@ -12,24 +12,21 @@ chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
 
 let currentMarkdown = '';
 
-// Кнопка клипа
-document.getElementById('clip-btn').addEventListener('click', async () => {
+// Кнопка клип - С DEFUDLE
+document.getElementById('clip-btn').onclick = async function() {
   console.log('=== CLIP BUTTON CLICKED ===');
   
-  const btn = document.getElementById('clip-btn');
+  const btn = this;
   const status = document.getElementById('status');
   const preview = document.getElementById('preview');
   const copyBtn = document.getElementById('copy-btn');
   
   btn.disabled = true;
-  btn.textContent = '⏳ Extracting...';
-  status.className = 'status';
-  status.style.display = 'none';
-  preview.classList.remove('show');
-  copyBtn.style.display = 'none';
-
+  btn.textContent = '⏳ Extracting with Defuddle...';
+  
   try {
-    const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+    const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+    const tab = tabs[0];
     
     // Проверяем что это обычная веб-страница
     const url = tab.url || '';
@@ -41,49 +38,54 @@ document.getElementById('clip-btn').addEventListener('click', async () => {
       throw new Error('Нельзя клипать системные страницы Chrome. Откройте обычную веб-страницу (https://...).');
     }
     
-    console.log('Executing script in page...');
+    console.log('Executing Defuddle in page...');
     const results = await chrome.scripting.executeScript({
       target: {tabId: tab.id},
       func: () => {
-        const title = document.title;
-        const url = window.location.href;
-        
-        // Ищем основной контент
-        const article = document.querySelector('article') || 
-                       document.querySelector('main') || 
-                       document.querySelector('[role="main"]') ||
-                       document.body;
-        
-        const clone = article.cloneNode(true);
-        
-        // Удаляем ненужные элементы
-        clone.querySelectorAll('script, style, nav, footer, iframe, noscript, .ad, .ads, .sidebar, .comments, .menu').forEach(el => el.remove());
+        // Используем Defuddle для извлечения контента
+        const defuddle = new Defuddle(document);
+        const result = defuddle.parse();
         
         return {
-          title,
-          url,
-          content: (clone.textContent || '').trim()
+          title: result.title || document.title,
+          url: window.location.href,
+          content: result.content,
+          author: result.author,
+          published: result.published,
+          description: result.description,
+          wordCount: result.wordCount,
+          parseTime: result.parseTime
         };
       }
     });
-
-    const data = results[0].result;
-    console.log('Extracted data:', data);
     
-    // Создаем простой Markdown
+    const data = results[0].result;
+    console.log('Extracted ', data);
+    
+    // Создаем Markdown с метаданными
     let markdown = '# ' + data.title + '\n\n';
-    markdown += '> Source: ' + data.url + '\n\n';
-    markdown += '> Clipped: ' + new Date().toLocaleString() + '\n\n---\n\n';
+    
+    if (data.author) {
+      markdown += '> Author: ' + data.author + '\n';
+    }
+    
+    markdown += '> Source: ' + data.url + '\n';
+    markdown += '> Clipped: ' + new Date().toLocaleString() + '\n\n';
+    
+    if (data.description) {
+      markdown += '## Summary\n\n' + data.description + '\n\n';
+    }
+    
+    markdown += '---\n\n';
     markdown += data.content;
     
     currentMarkdown = markdown;
     
-    // Показываем превью
     document.getElementById('markdown-output').textContent = markdown;
     preview.classList.add('show');
     copyBtn.style.display = 'block';
     
-    status.textContent = '✅ Clipped successfully!';
+    status.textContent = '✅ Clipped! (' + (data.wordCount || 0) + ' words, ' + (data.parseTime || 0) + 'ms)';
     status.className = 'status success';
     
   } catch (err) {
@@ -94,17 +96,16 @@ document.getElementById('clip-btn').addEventListener('click', async () => {
   
   btn.disabled = false;
   btn.textContent = '📋 Clip This Page';
-});
+};
 
 // Кнопка копирования
-document.getElementById('copy-btn').addEventListener('click', () => {
+document.getElementById('copy-btn').onclick = function() {
   navigator.clipboard.writeText(currentMarkdown).then(() => {
-    const btn = document.getElementById('copy-btn');
-    btn.textContent = '✅ Copied!';
+    this.textContent = '✅ Copied!';
     setTimeout(() => {
-      btn.textContent = '📋 Copy Markdown';
+      this.textContent = '📋 Copy Markdown';
     }, 2000);
   });
-});
+};
 
 console.log('All handlers set');

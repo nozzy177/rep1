@@ -12,12 +12,26 @@ export default function InstallGuide() {
     try {
       const zip = new JSZip();
       
+      // Скачиваем Defuddle с CDN
+      let defuddleCode = '';
+      try {
+        const response = await fetch('https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js');
+        if (response.ok) {
+          defuddleCode = await response.text();
+        } else {
+          throw new Error('Failed to fetch Defuddle');
+        }
+      } catch (err) {
+        console.error('Could not download Defuddle:', err);
+        defuddleCode = '// ERROR: Could not download Defuddle from CDN\n// Please download manually from: https://cdn.jsdelivr.net/npm/defuddle@0.19.4/dist/index.full.js\n';
+      }
+      
       // manifest.json
       const manifest = {
         manifest_version: 3,
         name: "Web Clipper",
-        version: "1.1.0",
-        description: "Clip web pages as Markdown",
+        version: "1.2.0",
+        description: "Clip web pages as Markdown using Defuddle",
         permissions: ["activeTab", "storage", "scripting"],
         host_permissions: ["<all_urls>"],
         action: {
@@ -28,6 +42,9 @@ export default function InstallGuide() {
         }
       };
       zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+      
+      // defuddle.min.js
+      zip.file('defuddle.min.js', defuddleCode);
       
       // background.js
       const background = `chrome.runtime.onInstalled.addListener(() => {
@@ -171,14 +188,15 @@ export default function InstallGuide() {
     <pre id="markdown-output"></pre>
   </div>
   <button class="copy-btn" id="copy-btn" style="display:none">📋 Copy Markdown</button>
+  <script src="defuddle.min.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>`;
       zip.file('popup.html', popupHtml);
       
-      // popup.js - САМАЯ ПРОСТАЯ ВЕРСИЯ
+      // popup.js - С DEFUDLE
       const popupJs = `
-console.log('popup.js loaded');
+console.log('=== popup.js LOADED ===');
 
 // Показываем информацию о странице сразу
 chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -192,10 +210,9 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 
 let currentMarkdown = '';
 
-// Кнопка клип - ПРЯМОЙ HANDLER
+// Кнопка клип - С DEFUDLE
 document.getElementById('clip-btn').onclick = async function() {
-  console.log('Button clicked!');
-  alert('Button clicked!');
+  console.log('=== CLIP BUTTON CLICKED ===');
   
   const btn = this;
   const status = document.getElementById('status');
@@ -203,34 +220,61 @@ document.getElementById('clip-btn').onclick = async function() {
   const copyBtn = document.getElementById('copy-btn');
   
   btn.disabled = true;
-  btn.textContent = '⏳ Extracting...';
+  btn.textContent = '⏳ Extracting with Defuddle...';
   
   try {
     const tabs = await chrome.tabs.query({active: true, currentWindow: true});
     const tab = tabs[0];
     
+    // Проверяем что это обычная веб-страница
+    const url = tab.url || '';
+    if (url.startsWith('chrome://') || 
+        url.startsWith('chrome-extension://') || 
+        url.startsWith('about:') || 
+        url.startsWith('edge://') ||
+        url.startsWith('devtools://')) {
+      throw new Error('Нельзя клипать системные страницы Chrome. Откройте обычную веб-страницу (https://...).');
+    }
+    
+    console.log('Executing Defuddle in page...');
     const results = await chrome.scripting.executeScript({
       target: {tabId: tab.id},
-      function: () => {
-        const title = document.title;
-        const url = window.location.href;
-        const article = document.querySelector('article') || 
-                       document.querySelector('main') || 
-                       document.querySelector('[role="main"]') ||
-                       document.body;
+      func: () => {
+        // Используем Defuddle для извлечения контента
+        const defuddle = new Defuddle(document);
+        const result = defuddle.parse();
         
-        const clone = article.cloneNode(true);
-        clone.querySelectorAll('script, style, nav, footer, iframe, noscript, .ad, .ads, .sidebar, .comments').forEach(el => el.remove());
-        
-        return {title, url, content: (clone.textContent || '').trim()};
+        return {
+          title: result.title || document.title,
+          url: window.location.href,
+          content: result.content,
+          author: result.author,
+          published: result.published,
+          description: result.description,
+          wordCount: result.wordCount,
+          parseTime: result.parseTime
+        };
       }
     });
     
     const data = results[0].result;
+    console.log('Extracted ', data);
     
+    // Создаем Markdown с метаданными
     let markdown = '# ' + data.title + '\\n\\n';
-    markdown += '> Source: ' + data.url + '\\n\\n';
-    markdown += '> Clipped: ' + new Date().toLocaleString() + '\\n\\n---\\n\\n';
+    
+    if (data.author) {
+      markdown += '> Author: ' + data.author + '\\n';
+    }
+    
+    markdown += '> Source: ' + data.url + '\\n';
+    markdown += '> Clipped: ' + new Date().toLocaleString() + '\\n\\n';
+    
+    if (data.description) {
+      markdown += '## Summary\\n\\n' + data.description + '\\n\\n';
+    }
+    
+    markdown += '---\\n\\n';
     markdown += data.content;
     
     currentMarkdown = markdown;
@@ -239,13 +283,12 @@ document.getElementById('clip-btn').onclick = async function() {
     preview.classList.add('show');
     copyBtn.style.display = 'block';
     
-    status.textContent = '✅ Clipped successfully!';
+    status.textContent = '✅ Clipped! (' + (data.wordCount || 0) + ' words, ' + (data.parseTime || 0) + 'ms)';
     status.className = 'status success';
     
   } catch (err) {
     console.error('Error:', err);
-    alert('Error: ' + err.message);
-    status.textContent = '❌ Error: ' + err.message;
+    status.textContent = '❌ ' + err.message;
     status.className = 'status error';
   }
   
@@ -320,7 +363,7 @@ console.log('All handlers set');
       </button>
       
       <p className="text-xs text-slate-400 text-center mb-5">
-        ZIP-архив с расширением • Готово к установке
+        ZIP-архив с расширением • Defuddle уже внутри
       </p>
 
       {/* Installation Steps */}
