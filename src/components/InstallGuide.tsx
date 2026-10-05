@@ -236,46 +236,51 @@ document.getElementById('clip-btn').onclick = async function() {
       throw new Error('Нельзя клипать системные страницы Chrome. Откройте обычную веб-страницу (https://...).');
     }
     
-    console.log('Executing Defuddle in page...');
+    console.log('Extracting HTML from page...');
+    
+    // Извлекаем полный HTML из страницы
     const results = await chrome.scripting.executeScript({
       target: {tabId: tab.id},
       func: () => {
-        // Используем Defuddle для извлечения контента
-        const defuddle = new Defuddle(document);
-        const result = defuddle.parse();
-        
         return {
-          title: result.title || document.title,
+          title: document.title,
           url: window.location.href,
-          content: result.content,
-          author: result.author,
-          published: result.published,
-          description: result.description,
-          wordCount: result.wordCount,
-          parseTime: result.parseTime
+          html: document.documentElement.outerHTML
         };
       }
     });
     
     const data = results[0].result;
-    console.log('Extracted ', data);
+    console.log('HTML extracted, processing with Defuddle...');
+    
+    btn.textContent = '⏳ Processing with Defuddle...';
+    
+    // Создаем Document из HTML для Defuddle
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data.html, 'text/html');
+    
+    // Используем Defuddle для обработки
+    const defuddle = new Defuddle(doc);
+    const result = defuddle.parse();
+    
+    console.log('Defuddle processed:', result);
     
     // Создаем Markdown с метаданными
-    let markdown = '# ' + data.title + '\\n\\n';
+    let markdown = '# ' + (result.title || data.title) + '\\n\\n';
     
-    if (data.author) {
-      markdown += '> Author: ' + data.author + '\\n';
+    if (result.author) {
+      markdown += '> Author: ' + result.author + '\\n';
     }
     
     markdown += '> Source: ' + data.url + '\\n';
     markdown += '> Clipped: ' + new Date().toLocaleString() + '\\n\\n';
     
-    if (data.description) {
-      markdown += '## Summary\\n\\n' + data.description + '\\n\\n';
+    if (result.description) {
+      markdown += '## Summary\\n\\n' + result.description + '\\n\\n';
     }
     
     markdown += '---\\n\\n';
-    markdown += data.content;
+    markdown += result.content;
     
     currentMarkdown = markdown;
     
@@ -283,7 +288,7 @@ document.getElementById('clip-btn').onclick = async function() {
     preview.classList.add('show');
     copyBtn.style.display = 'block';
     
-    status.textContent = '✅ Clipped! (' + (data.wordCount || 0) + ' words, ' + (data.parseTime || 0) + 'ms)';
+    status.textContent = '✅ Clipped! (' + (result.wordCount || 0) + ' words, ' + (result.parseTime || 0) + 'ms)';
     status.className = 'status success';
     
   } catch (err) {
